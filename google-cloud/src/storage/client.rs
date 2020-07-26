@@ -14,7 +14,7 @@ use crate::storage::{Bucket, Error};
 pub struct Client {
     pub(crate) project_name: String,
     pub(crate) client: Arc<reqwest::Client>,
-    pub(crate) token_provider: Arc<Mutex<Box<dyn TokenProvider>>>,
+    pub(crate) token_provider: Arc<Mutex<Box<dyn TokenProvider + Send>>>,
 }
 
 impl Client {
@@ -54,7 +54,7 @@ impl Client {
 				project_name: project_name.into(),
 				token_provider: Arc::new(Mutex::new(Box::new(MetadataManager::new(
 					Client::SCOPES.as_ref(),
-				)) as Box<dyn TokenProvider>)),
+				)) as Box<dyn TokenProvider + Send>)),
 			})
 		} else {
 			Err(Error::Auth(crate::error::AuthError::Config("Missing both GOOGLE_APPLICATION_CREDENTIALS and metadata service.".to_string())))
@@ -77,7 +77,7 @@ impl Client {
             token_provider: Arc::new(Mutex::new(Box::new(TokenManager::new(
                 creds,
                 Client::SCOPES.as_ref(),
-            )) as Box<dyn TokenProvider>)),
+            )) as Box<dyn TokenProvider + Send>)),
         })
     }
 

@@ -10,10 +10,10 @@ pub struct BucketAclResource {
     pub bucket: String,
     pub entity: String,
     pub role: String,
-    pub email: String,
-    pub entity_id: String,
-    pub domain: String,
-    pub project_team: BucketAclProjectTeam,
+    pub email: Option<String>,
+    pub entity_id: Option<String>,
+    pub domain: Option<String>,
+    pub project_team: Option<BucketAclProjectTeam>,
     pub etag: String,
 }
 

@@ -27,16 +27,27 @@ impl Bucket {
         name: &str,
         data: impl Into<Vec<u8>>,
         mime_type: impl AsRef<str>,
+        acl: Option<String>,
     ) -> Result<Object, Error> {
         let client = &mut self.client;
         let inner = &client.client;
         let uri = format!("{}/b/{}/o", Client::UPLOAD_ENDPOINT, self.name);
 
+        let query_pairs = vec![
+            ("uploadType", "media"),
+            ("name", name),
+            ("predefinedAcl", if let Some(ref acl) = acl {
+                acl
+            } else {
+                "private"
+            }),
+        ];
+
         let data = data.into();
         let token = client.token_provider.lock().await.token().await?;
         let request = inner
             .post(uri.as_str())
-            .query(&[("uploadType", "media"), ("name", name)])
+            .query(query_pairs.as_slice())
             .header("authorization", token)
             .header("content-type", mime_type.as_ref())
             .header("content-length", data.len())

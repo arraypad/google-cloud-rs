@@ -76,7 +76,7 @@ pub struct BucketEncryption {
 #[serde(rename_all = "camelCase")]
 pub struct BucketOwner {
     pub entity: String,
-    pub entity_id: String,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

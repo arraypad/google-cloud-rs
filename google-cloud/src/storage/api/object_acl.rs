@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct ObjectAclResource {
     /// Value: "storage#objectAccessControl"
-    pub kind: String,
+    pub kind: Option<String>,
     pub entity: String,
-    pub role: String,
-    pub email: String,
-    pub entity_id: String,
-    pub domain: String,
-    pub project_team: ObjectAclProjectTeam,
+    pub role: Option<String>,
+    pub email: Option<String>,
+    pub entity_id: Option<String>,
+    pub domain: Option<String>,
+    pub project_team: Option<ObjectAclProjectTeam>,
     pub etag: String,
 }
 
