@@ -5,7 +5,7 @@ use std::sync::Arc;
 use json::json;
 use tokio::sync::Mutex;
 
-use crate::authorize::{ApplicationCredentials, TokenManager};
+use crate::authorize::{ApplicationCredentials, MetadataManager, TokenProvider, TokenManager};
 use crate::storage::api::bucket::{BucketResource, BucketResources};
 use crate::storage::{Bucket, Error};
 
@@ -14,7 +14,7 @@ use crate::storage::{Bucket, Error};
 pub struct Client {
     pub(crate) project_name: String,
     pub(crate) client: Arc<reqwest::Client>,
-    pub(crate) token_manager: Arc<Mutex<TokenManager>>,
+    pub(crate) token_provider: Arc<Mutex<Box<dyn TokenProvider>>>,
 }
 
 impl Client {
@@ -41,11 +41,24 @@ impl Client {
     ///
     /// Credentials are looked up in the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
     pub async fn new(project_name: impl Into<String>) -> Result<Client, Error> {
-        let path = env::var("GOOGLE_APPLICATION_CREDENTIALS")?;
-        let file = File::open(path)?;
-        let creds = json::from_reader(file)?;
+        if let Ok(path) = env::var("GOOGLE_APPLICATION_CREDENTIALS") {
+			let file = File::open(path)?;
+			let creds = json::from_reader(file)?;
+			Client::from_credentials(project_name, creds).await
+		} else if let Ok(_) = std::env::var("K_SERVICE") {
+			let client = reqwest::Client::builder()
+				.build()?;
 
-        Client::from_credentials(project_name, creds).await
+			Ok(Client {
+				client: Arc::new(client),
+				project_name: project_name.into(),
+				token_provider: Arc::new(Mutex::new(Box::new(MetadataManager::new(
+					Client::SCOPES.as_ref(),
+				)) as Box<dyn TokenProvider>)),
+			})
+		} else {
+			Err(Error::Auth(crate::error::AuthError::Config("Missing both GOOGLE_APPLICATION_CREDENTIALS and metadata service.".to_string())))
+		}
     }
 
     /// Create a new client for the specified project with custom credentials.
@@ -61,10 +74,10 @@ impl Client {
         Ok(Client {
             client: Arc::new(client),
             project_name: project_name.into(),
-            token_manager: Arc::new(Mutex::new(TokenManager::new(
+            token_provider: Arc::new(Mutex::new(Box::new(TokenManager::new(
                 creds,
                 Client::SCOPES.as_ref(),
-            ))),
+            )) as Box<dyn TokenProvider>)),
         })
     }
 
@@ -73,7 +86,7 @@ impl Client {
         let inner = &self.client;
         let uri = format!("{}/b/{}", Client::ENDPOINT, name);
 
-        let token = self.token_manager.lock().await.token().await?;
+        let token = self.token_provider.lock().await.token().await?;
         let request = inner
             .get(uri.as_str())
             .header("authorization", token)
@@ -92,7 +105,7 @@ impl Client {
         let inner = &self.client;
         let uri = format!("{}/b", Client::ENDPOINT);
 
-        let token = self.token_manager.lock().await.token().await?;
+        let token = self.token_provider.lock().await.token().await?;
         let request = inner
             .get(uri.as_str())
             .query(&[("project", self.project_name.as_str())])
@@ -122,7 +135,7 @@ impl Client {
             "kind": "storage#bucket",
             "name": name,
         });
-        let token = self.token_manager.lock().await.token().await?;
+        let token = self.token_provider.lock().await.token().await?;
         let request = inner
             .post(uri.as_str())
             .query(&[("project", self.project_name.as_str())])

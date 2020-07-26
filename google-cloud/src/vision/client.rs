@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 use tonic::{IntoRequest, Request};
 
-use crate::authorize::{ApplicationCredentials, TokenManager, TLS_CERTS};
+use crate::authorize::{ApplicationCredentials, TokenProvider, TokenManager, TLS_CERTS};
 use crate::vision::api;
 use crate::vision::api::image_annotator_client::ImageAnnotatorClient;
 use crate::vision::api::product_search_client::ProductSearchClient;

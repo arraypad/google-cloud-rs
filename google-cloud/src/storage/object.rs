@@ -47,7 +47,7 @@ impl Object {
         let inner = &client.client;
         let uri = format!("{}/b/{}/o/{}", Client::ENDPOINT, self.bucket, self.name);
 
-        let token = client.token_manager.lock().await.token().await?;
+        let token = client.token_provider.lock().await.token().await?;
         let request = inner
             .get(uri.as_str())
             .query(&[("alt", "media")])
@@ -65,7 +65,7 @@ impl Object {
         let inner = client.client;
         let uri = format!("{}/b/{}/o/{}", Client::ENDPOINT, self.bucket, self.name);
 
-        let token = client.token_manager.lock().await.token().await?;
+        let token = client.token_provider.lock().await.token().await?;
         let request = inner
             .delete(uri.as_str())
             .header("authorization", token)

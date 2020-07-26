@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 use tonic::{IntoRequest, Request};
 
-use crate::authorize::{ApplicationCredentials, TokenManager, TLS_CERTS};
+use crate::authorize::{ApplicationCredentials, TokenProvider, TokenManager, TLS_CERTS};
 use crate::pubsub::api;
 use crate::pubsub::api::publisher_client::PublisherClient;
 use crate::pubsub::api::subscriber_client::SubscriberClient;

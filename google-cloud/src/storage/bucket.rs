@@ -33,7 +33,7 @@ impl Bucket {
         let uri = format!("{}/b/{}/o", Client::UPLOAD_ENDPOINT, self.name);
 
         let data = data.into();
-        let token = client.token_manager.lock().await.token().await?;
+        let token = client.token_provider.lock().await.token().await?;
         let request = inner
             .post(uri.as_str())
             .query(&[("uploadType", "media"), ("name", name)])
@@ -59,7 +59,7 @@ impl Bucket {
         let inner = &client.client;
         let uri = format!("{}/b/{}/o/{}", Client::ENDPOINT, self.name, name);
 
-        let token = client.token_manager.lock().await.token().await?;
+        let token = client.token_provider.lock().await.token().await?;
         let request = inner
             .get(uri.as_str())
             .header("authorization", token)
@@ -81,7 +81,7 @@ impl Bucket {
         let inner = client.client;
         let uri = format!("{}/b/{}", Client::ENDPOINT, self.name);
 
-        let token = client.token_manager.lock().await.token().await?;
+        let token = client.token_provider.lock().await.token().await?;
         let request = inner
             .delete(uri.as_str())
             .header("authorization", token)

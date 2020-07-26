@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 use tonic::{IntoRequest, Request};
 
-use crate::authorize::{ApplicationCredentials, TokenManager, TLS_CERTS};
+use crate::authorize::{ApplicationCredentials, TokenProvider, TokenManager, TLS_CERTS};
 use crate::datastore::api;
 use crate::datastore::api::datastore_client::DatastoreClient;
 use crate::datastore::api::value::ValueType;

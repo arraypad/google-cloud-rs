@@ -2,10 +2,12 @@ use std::fmt;
 
 use chrono::offset::Utc;
 use chrono::DateTime;
+use hyper::body::Body;
 use hyper::client::{Client, HttpConnector};
 use hyper_rustls::HttpsConnector;
 use json::json;
 use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 
 use crate::error::AuthError;
 
@@ -13,6 +15,7 @@ use crate::error::AuthError;
 pub(crate) const TLS_CERTS: &[u8] = include_bytes!("../../roots.pem");
 
 const AUTH_ENDPOINT: &str = "https://oauth2.googleapis.com/token";
+const META_ENDPOINT: &str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
 
 /// Represents application credentials for accessing Google Cloud Platform services.
 #[allow(missing_docs)]
@@ -50,6 +53,60 @@ pub(crate) struct Token {
     expiry: DateTime<Utc>,
 }
 
+#[async_trait]
+pub(crate) trait TokenProvider {
+    async fn token(&mut self) -> Result<String, AuthError>;
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct MetadataManager {
+    client: Client<HttpsConnector<HttpConnector>>,
+    scopes: String,
+    current_token: Option<Token>,
+}
+
+impl MetadataManager {
+    pub(crate) fn new(scopes: &[&str]) -> MetadataManager {
+        MetadataManager {
+            client: Client::builder().build::<_, hyper::Body>(HttpsConnector::new()),
+            scopes: scopes.join(" "),
+            current_token: None,
+        }
+    }
+}
+
+#[async_trait]
+impl TokenProvider for MetadataManager {
+    async fn token(&mut self) -> Result<String, AuthError> {
+        let current_time = chrono::Utc::now();
+        if let Some(ref token) = self.current_token {
+            if token.expiry >= current_time {
+                return Ok(token.value.to_string());
+            }
+        }
+
+        let req = hyper::Request::builder()
+            .method("GET")
+            .uri(META_ENDPOINT)
+            .header("Metadata-Flavor", "Google")
+            .body(Body::empty())?;
+
+        let data = hyper::body::to_bytes(self.client.request(req).await?.into_body())
+            .await?;
+
+        let ar: AuthResponse = json::from_reader(&*data)?;
+
+        let token = Token {
+            value: TokenValue::Bearer(ar.access_token),
+            expiry: chrono::Utc::now() + chrono::Duration::seconds(ar.expires_in),
+        };
+
+        let token_str = token.value.to_string();
+        self.current_token = Some(token);
+        Ok(token_str)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct TokenManager {
     client: Client<HttpsConnector<HttpConnector>>,
@@ -61,6 +118,8 @@ pub(crate) struct TokenManager {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct AuthResponse {
     access_token: String,
+    #[serde(default)]
+    expires_in: i64,
 }
 
 impl TokenManager {
@@ -72,8 +131,11 @@ impl TokenManager {
             current_token: None,
         }
     }
+}
 
-    pub(crate) async fn token(&mut self) -> Result<String, AuthError> {
+#[async_trait]
+impl TokenProvider for TokenManager {
+    async fn token(&mut self) -> Result<String, AuthError> {
         let hour = chrono::Duration::minutes(45);
         let current_time = chrono::Utc::now();
         match self.current_token {

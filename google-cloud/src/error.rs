@@ -64,4 +64,7 @@ pub enum AuthError {
     /// Hyper errors
     #[error("Hyper error: {0}")]
     Hyper(#[from] hyper::Error),
+    /// Config errors
+    #[error("Config error: {0}")]
+    Config(String),
 }
