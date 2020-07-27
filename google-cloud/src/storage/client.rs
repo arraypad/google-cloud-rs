@@ -82,7 +82,7 @@ impl Client {
     }
 
     /// Get a handle to a specific bucket.
-    pub async fn bucket(&mut self, name: &str) -> Result<Bucket, Error> {
+    pub async fn bucket(&self, name: &str) -> Result<Bucket, Error> {
         let inner = &self.client;
         let uri = format!("{}/b/{}", Client::ENDPOINT, name);
 
@@ -101,7 +101,7 @@ impl Client {
     }
 
     /// Get a handle to a specific object.
-    pub fn object(&mut self, bucket: &str, name: &str) -> Object {
+    pub fn object(&self, bucket: &str, name: &str) -> Object {
         Object::new(self.clone(), bucket, name)
     }
 
