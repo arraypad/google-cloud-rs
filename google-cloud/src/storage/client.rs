@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 
 use crate::authorize::{ApplicationCredentials, MetadataManager, TokenProvider, TokenManager};
 use crate::storage::api::bucket::{BucketResource, BucketResources};
-use crate::storage::{Bucket, Error};
+use crate::storage::{Bucket, Object, Error};
 
 /// The Cloud Storage client, tied to a specific project.
 #[derive(Clone)]
@@ -98,6 +98,11 @@ impl Client {
             .await?;
 
         Ok(Bucket::new(self.clone(), bucket.name))
+    }
+
+    /// Get a handle to a specific object.
+    pub fn object(&mut self, bucket: &str, name: &str) -> Object {
+        Object::new(self.clone(), bucket, name)
     }
 
     /// List all existing buckets of the current project.
